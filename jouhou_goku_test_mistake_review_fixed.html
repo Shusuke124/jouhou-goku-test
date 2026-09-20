@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>情報語句テスト</title>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#667085;--accent:#4f46e5;--ok:#16803c;--ng:#c62828;--border:#e4e7ec}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(135deg,#eef2ff,#f8fafc);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif;color:var(--text)}
+.container{max-width:820px;margin:auto;padding:28px 16px 50px}
+header{text-align:center;margin-bottom:22px}
+h1{margin:0 0 8px;font-size:clamp(25px,5vw,38px)}
+.subtitle{color:var(--muted);margin:0}
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 10px 30px rgba(20,30,60,.08)}
+.top{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:18px}
+.badge{background:#eef2ff;color:#3730a3;padding:7px 11px;border-radius:999px;font-weight:700;font-size:14px}
+.progress{height:9px;background:#edf0f5;border-radius:99px;overflow:hidden;margin:0 0 24px}
+.bar{height:100%;width:0;background:var(--accent);transition:.25s}
+.question{font-size:22px;line-height:1.65;font-weight:700;margin:10px 0 20px}
+input{width:100%;font-size:19px;padding:14px 15px;border:2px solid #d9ddea;border-radius:12px;outline:none}
+input:focus{border-color:var(--accent)}
+.buttons{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+button{border:0;border-radius:12px;padding:12px 17px;font-size:16px;font-weight:700;cursor:pointer}
+.primary{background:var(--accent);color:white}
+.secondary{background:#eef0f4;color:#283044}
+button:disabled{opacity:.5;cursor:not-allowed}
+.feedback{min-height:54px;margin-top:18px;padding:13px 15px;border-radius:12px;line-height:1.6}
+.correct{background:#eaf8ef;color:var(--ok)}
+.wrong{background:#fff0f0;color:var(--ng)}
+.answer{font-weight:800}
+.hidden{display:none}
+.result{text-align:center;padding:10px 0 4px}
+.score{font-size:48px;font-weight:900;color:var(--accent);margin:8px}
+.small{color:var(--muted);font-size:14px}
+.review{margin-top:22px;text-align:left}
+.review-item{padding:14px 0;border-bottom:1px solid var(--border)}
+.review-q{font-weight:700}
+.review-a{color:var(--muted);margin-top:5px}
+footer{text-align:center;color:var(--muted);margin-top:18px;font-size:13px}
+</style>
+
+<style id="frequent-mistake-style">
+.question-text.frequent-mistake {
+  color: #d12b2b !important;
+  font-weight: 700;
+}
+</style>
+
+<style id="mistake-review-style">
+.mistake-review-btn {
+  display:block;
+  width:100%;
+  margin-top:12px;
+  padding:12px 16px;
+  border:2px solid #d12b2b;
+  border-radius:10px;
+  background:#fff;
+  color:#d12b2b;
+  font-weight:700;
+  cursor:pointer;
+}
+.mistake-review-btn:hover { background:#fff4f4; }
+.mistake-review-empty {
+  padding:18px;
+  text-align:center;
+  color:#666;
+}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>情報語句テスト</h1>
+<p class="subtitle">13~AD</p>
+</header>
+
+<div class="card" id="startCard">
+  <div class="result">
+    <h2 style="margin-top:0">学習モードを選択</h2>
+    <p class="small">最初に挑戦する問題数を選んでください。</p>
+    <div class="buttons" style="justify-content:center;margin-top:22px">
+      <button class="primary" id="start10">10問モード</button>
+      <button class="secondary" id="startAll">全問モード（72問）</button>
+    </div>
+  </div>
+</div>
+
+<div class="card hidden" id="quizCard">
+<div class="top">
+<span class="badge" id="count">1 / 10</span>
+<span class="small">入力して「答え合わせ」</span>
+</div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<div class="question" id="question"></div>
+<input id="answer" autocomplete="off" placeholder="答えを入力…">
+<div class="buttons">
+<button class="primary" id="check">答え合わせ</button>
+<button class="secondary" id="skip">わからない</button>
+<button class="secondary" id="next" disabled>次の問題 →</button>
+</div>
+<div id="feedback" class="feedback hidden"></div>
+</div>
+
+<div class="card result hidden" id="resultCard">
+<div class="small">今回の結果</div>
+<div class="score" id="score">0 / 10</div>
+<div id="message"></div>
+<div class="buttons" style="justify-content:center;margin-top:18px">
+<button class="primary" id="retry">もう一度</button>
+<button class="secondary" id="all">全問題モード</button>
+</div>
+<div class="review" id="review"></div>
+</div>
+
+<footer>※答えはプリントの記載内容をもとに整理しています。表記ゆれ（例：CPU・中央処理装置）にも対応しています。</footer>
+</div>
+
+<script>
+const BANK = [{"q": "コンピュータで扱う情報を、連続した値として表したものは？", "a": ["アナログ"]}, {"q": "連続した情報を、数値などの離散的な値で表したものは？", "a": ["デジタル"]}, {"q": "アナログ信号を一定の時間間隔で区切って値を取り出すことは？", "a": ["標本化"]}, {"q": "標本化するときの、1秒あたりのサンプル数を表すものは？", "a": ["標本化周波数"]}, {"q": "標本化した値を、決められた段階の数値に置き換えることは？", "a": ["量子化"]}, {"q": "量子化するとき、何段階の値で表すかを決める数は？", "a": ["量子化ビット数"]}, {"q": "量子化した値を2進数で表すことは？", "a": ["符号化"]}, {"q": "音声などを「標本化→量子化→符号化」してデジタル化する方式は？", "a": ["PCM", "パルス符号変調"]}, {"q": "画像を構成する、色を表現できる最小単位は？", "a": ["画素", "ピクセル"]}, {"q": "画像を構成する物理的な最小単位を英語由来で何という？", "a": ["ドット"]}, {"q": "ディスプレイの1インチあたりの画素数を表す単位は？", "a": ["ppi"]}, {"q": "画像の細かさを表す尺度は？", "a": ["解像度"]}, {"q": "画像を点の集まりとして表現する形式は？", "a": ["ラスタ形式"]}, {"q": "画像を座標や図形などで表現する形式は？", "a": ["ベクタ形式"]}, {"q": "ペイント系ソフトウェアが扱う代表的な画像形式は？", "a": ["ラスタ形式"]}, {"q": "ドロー系ソフトウェアが扱う代表的な画像形式は？", "a": ["ベクタ形式"]}, {"q": "ラスタ形式の画像を拡大したときに現れるギザギザは？", "a": ["ジャギー"]}, {"q": "コンピュータの支援により設計・製図作業を自動化する設計方法は？", "a": ["CAD", "CADソフトウェア"]}, {"q": "データや命令を入力する装置は？", "a": ["入力装置"]}, {"q": "データや命令を記録する装置は？", "a": ["記憶装置"]}, {"q": "電源を切るとデータが消える性質を持つ、主にICメモリが使われる記憶装置は？", "a": ["主記憶装置"]}, {"q": "HDD・BD・SSD・SDなど、大量のデータを長期間記憶する装置は？", "a": ["補助記憶装置"]}, {"q": "処理結果をディスプレイやプリンタなどへ出力する装置は？", "a": ["出力装置"]}, {"q": "計算や判断を行う装置は？", "a": ["演算装置"]}, {"q": "各装置を制御する装置は？", "a": ["制御装置"]}, {"q": "演算装置と制御装置を合わせたものは？", "a": ["中央処理装置", "CPU"]}, {"q": "コンピュータ全体を管理し、ハードウェアを制御する基本ソフトウェアは？", "a": ["オペレーティングシステム", "OS"]}, {"q": "文字ベースでコンピュータを操作するインターフェースは？", "a": ["CUI"]}, {"q": "グラフィックスベースでコンピュータを操作するインターフェースは？", "a": ["GUI"]}, {"q": "ワープロ、表計算、画像処理、Webブラウザなどのソフトウェアは？", "a": ["応用ソフトウェア"]}, {"q": "ソフトウェアの実行順序やCPUへの割り当てを管理するOSの機能は？", "a": ["タスク管理"]}, {"q": "各ソフトウェアが使うメモリの割り当てを管理するOSの機能は？", "a": ["記憶管理", "メモリ管理"]}, {"q": "キーボードやプリンタなど周辺機器のハードウェアを管理するOSの機能は？", "a": ["入出力管理"]}, {"q": "補助記憶装置とのファイルの読み書きを管理するOSの機能は？", "a": ["ファイル管理"]}, {"q": "CPU・メモリ・ハードディスクなどのコンピュータ資源を管理するOSの機能は？", "a": ["資源管理", "リソース管理"]}, {"q": "複数のユーザーアカウントを登録・削除するなど、利用者を管理するOSの機能は？", "a": ["ユーザ管理"]}, {"q": "主記憶装置のどの番地の命令を次に取り出すかを指定するレジスタは？", "a": ["プログラムカウンタ"]}, {"q": "主記憶装置から一時的に命令を保存するレジスタは？", "a": ["命令レジスタ"]}, {"q": "命令を解読して各部を制御する装置は？", "a": ["命令解読器"]}, {"q": "データを一時的に保存するレジスタは？", "a": ["データレジスタ"]}, {"q": "CPU内で、加算などの算術演算やその他の演算を行う装置は？", "a": ["演算装置"]}, {"q": "CPU内の記憶場所を何という？", "a": ["レジスタ"]}, {"q": "CPUが命令を実行するときの基本的な一連の動作は「命令の取り出し→解読→何？」", "a": ["実行"]}, {"q": "CPU内の処理を行う部分が複数個あるCPUは？", "a": ["マルチコアCPU"]}, {"q": "CPUが一度に処理できるデータ量の違いを表す「16/32/64ビット」の数は？", "a": ["ビット数"]}, {"q": "複数装置の動作タイミングを合わせるために用いる信号は？", "a": ["クロック信号"]}, {"q": "1秒間の信号の回数を表し、CPUの性能の尺度の一つとなるものは？", "a": ["クロック周波数"]}, {"q": "データの持つ情報を保ったまま、ファイルサイズを小さくする処理は？", "a": ["圧縮"]}, {"q": "圧縮したデータをもとのデータに戻す処理は？", "a": ["伸張", "復元", "展開"]}, {"q": "圧縮前と伸張後のデータが同一である圧縮方式は？", "a": ["可逆圧縮"]}, {"q": "多少の情報の欠損を許容する代わりに、圧縮効率を高めた方式は？", "a": ["非可逆圧縮"]}, {"q": "圧縮後のサイズを圧縮前のサイズで割って100を掛けた値は？", "a": ["圧縮率"]}, {"q": "同じデータが連続している個数を数えて圧縮する方式は？", "a": ["ランレングス圧縮"]}, {"q": "これからのデータが何文字前の何文字分と同じか、という位置と長さの情報を利用する圧縮は？", "a": ["LZ圧縮"]}, {"q": "出現頻度の高いデータほど短いコードを与える圧縮方法は？", "a": ["ハフマン圧縮"]}, {"q": "非可逆圧縮で使われる音声の形式の例は？", "a": ["AAC"]}, {"q": "非可逆圧縮で使われる動画の形式の例は？", "a": ["MPEG-4", "H.264"]}, {"q": "非可逆圧縮で使われる静止画の形式は？", "a": ["JPEG"]}, {"q": "R・G・Bを混ぜると明るさが増して、何に近づく？", "a": ["白"]}, {"q": "R・G・Bを混ぜて色を表現する混色を何という？", "a": ["加法混色"]}, {"q": "C・M・Yを組み合わせて色を表現する混色を何という？", "a": ["減法混色"]}, {"q": "色の三原色のCは何色？", "a": ["シアン"]}, {"q": "色の三原色のMは何色？", "a": ["マゼンタ"]}, {"q": "色の三原色のYは何色？", "a": ["イエロー"]}, {"q": "色の三原色を混ぜると、何に近づく？", "a": ["黒"]}, {"q": "光の明るさが変化する段階数を何という？", "a": ["階調"]}, {"q": "R・G・Bをそれぞれ8ビットで表し、1画素を合計24ビットで表現する方式を何という？", "a": ["24ビットフルカラー"]}, {"q": "アナログ画像から各画素の赤・緑・青の成分ごとに明るさを取り出すことを何という？", "a": ["標本化"]}, {"q": "各画素の明るさを最も近い階調値にそろえることを何という？", "a": ["量子化"]}, {"q": "数値をコンピュータ内部のビット列に変換したとき、表現に収まらない場合に生じるものは？", "a": ["誤差"]}, {"q": "2進数をある一定の桁で丸めて端数処理することを何という？", "a": ["丸め処理"]}, {"q": "丸め処理によって生じる誤差を何という？", "a": ["丸め誤差"]}];
+
+const normalize = s => s.toLowerCase()
+  .replace(/[\s　]/g,"")
+  .replace(/[・･,，、。．\(\)（）「」【】［］\[\]ー−–—]/g,"")
+  .replace(/ソフトウェア/g,"ソフトウェア");
+
+let modeCount = 10, quiz = [], idx = 0, score = 0, answered = false, history = [];
+
+const $ = id => document.getElementById(id);
+function shuffle(a){ return [...a].sort(()=>Math.random()-0.5); }
+
+const MISTAKE_KEY = 'jouhouGokuTestMistakes_v1';
+function getMistakes(){
+  try { return JSON.parse(localStorage.getItem(MISTAKE_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function saveMistakes(map){
+  try { localStorage.setItem(MISTAKE_KEY, JSON.stringify(map)); }
+  catch(e) {}
+}
+function questionKey(item){ return item.q; }
+function weightedPick(items, count){
+  const pool = [...items];
+  const picked = [];
+  const mistakes = getMistakes();
+  while(pool.length && picked.length < Math.min(count, items.length)){
+    const weights = pool.map(item => 1 + Math.min(8, Number(mistakes[questionKey(item)] || 0)) * 3);
+    const total = weights.reduce((a,b)=>a+b,0);
+    let r = Math.random() * total;
+    let chosenIndex = 0;
+    for(let i=0;i<weights.length;i++){
+      r -= weights[i];
+      if(r <= 0){ chosenIndex = i; break; }
+    }
+    picked.push(pool[chosenIndex]);
+    pool.splice(chosenIndex,1);
+  }
+  return picked;
+}
+
+function start(count){
+  modeCount = count;
+  quiz = count === 10 ? weightedPick(BANK, 10) : shuffle(BANK).slice(0, Math.min(count,BANK.length));
+  idx=0; score=0; answered=false; history=[];
+  $("quizCard").classList.remove("hidden");
+  $("resultCard").classList.add("hidden");
+  show();
+}
+
+function show(){
+  const item=quiz[idx];
+  $("count").textContent = `${idx+1} / ${quiz.length}`;
+  $("bar").style.width = `${(idx/quiz.length)*100}%`;
+  $("question").textContent = item.q;
+  $("question").classList.toggle("frequent-mistake", Number(getMistakes()[questionKey(item)] || 0) >= 2);
+  $("answer").value="";
+  $("answer").disabled=false;
+  $("feedback").className="feedback hidden";
+  $("feedback").innerHTML="";
+  $("check").disabled=false;
+  $("skip").disabled=false;
+  $("next").disabled=true;
+  $("answer").focus();
+  answered=false;
+}
+
+function checkAnswer(force=false){
+  if(answered) return;
+  const item=quiz[idx];
+  const user=$("answer").value.trim();
+  const ok = !force && item.a.some(x=>normalize(x)===normalize(user));
+  answered=true;
+  if(ok) score++;
+
+  // 両モード共通で、間違えた回数を記録する。
+  // 10問モードでは苦手問題ほど次回に出やすくし、
+  // 両モードで2回以上間違えた問題の文を色付き表示する。
+  {
+    const mistakes = getMistakes();
+    const key = questionKey(item);
+    const current = Number(mistakes[key] || 0);
+    mistakes[key] = ok ? Math.max(0, current - 1) : Math.min(8, current + 1);
+    saveMistakes(mistakes);
+  }
+
+  history.push({q:item.q, user:user||"（未回答）", answers:item.a, ok});
+  $("answer").disabled=true;
+  $("check").disabled=true;
+  $("skip").disabled=true;
+  $("next").disabled=false;
+  $("feedback").className="feedback "+(ok?"correct":"wrong");
+  $("feedback").innerHTML = ok
+    ? "⭕ 正解！"
+    : `❌ 正解：<span class="answer">${item.a.join(" / ")}</span>`;
+}
+
+$("check").onclick=()=>checkAnswer(false);
+$("skip").onclick=()=>{ $("answer").value=""; checkAnswer(true); };
+$("next").onclick=()=>{ if(idx+1<quiz.length){idx++;show();}else{finish();} };
+$("answer").addEventListener("keydown",e=>{if(e.key==="Enter") checkAnswer(false);});
+
+function finish(){
+  $("quizCard").classList.add("hidden");
+  $("resultCard").classList.remove("hidden");
+  $("score").textContent=`${score} / ${quiz.length}`;
+  const rate=score/quiz.length;
+  $("message").textContent = rate===1 ? "🎉 全問正解！すごい！" :
+    rate>=.8 ? "🔥 かなり覚えています！" :
+    rate>=.6 ? "👍 もう一周するとさらに安定します！" :
+    "💪 間違えたところを復習して、もう一度挑戦しよう！";
+  $("bar").style.width="100%";
+  $("review").innerHTML=history.map((h,i)=>`
+    <div class="review-item">
+      <div class="review-q">${i+1}. ${h.q}</div>
+      <div class="review-a">あなた：${h.user}　｜　正解：${h.answers.join(" / ")}</div>
+    </div>`).join("");
+}
+
+$("retry").onclick=()=>{
+  $("startCard").classList.remove("hidden");
+  $("resultCard").classList.add("hidden");
+  $("quizCard").classList.add("hidden");
+};
+$("all").onclick=()=>start(BANK.length);
+$("start10").onclick=()=>start(10);
+$("startAll").onclick=()=>start(BANK.length);
+</script>
+
+<script id="frequent-mistake-runner">
+(function(){
+  function counts(){
+    try { return JSON.parse(localStorage.getItem('mistakeCounts') || '{}'); }
+    catch(e) { return {}; }
+  }
+  function refresh(){
+    const c = counts();
+    document.querySelectorAll('.question-text').forEach(function(el){
+      const i = el.dataset.questionIndex;
+      if (i !== undefined) el.classList.toggle('frequent-mistake', Number(c[i] || 0) >= 2);
+    });
+  }
+  window.refreshFrequentMistakeColors = refresh;
+  document.addEventListener('DOMContentLoaded', refresh);
+  setInterval(refresh, 500);
+})();
+</script>
+
+<script id="mistake-review-feature">
+(function(){
+  // 本体のクイズが使っているキー・問題データと同じものを使う。
+  function getCounts(){
+    try { return JSON.parse(localStorage.getItem('jouhouGokuTestMistakes_v1') || '{}'); }
+    catch(e){ return {}; }
+  }
+  function setCounts(c){
+    localStorage.setItem('jouhouGokuTestMistakes_v1', JSON.stringify(c));
+  }
+
+  function getBank(){
+    return (typeof BANK !== 'undefined') ? BANK : [];
+  }
+
+  function addButton(){
+    if(document.getElementById('mistakeReviewBtn')) return;
+    const target = document.getElementById('start10')?.parentElement;
+    if(!target) return;
+
+    const btn = document.createElement('button');
+    btn.id = 'mistakeReviewBtn';
+    btn.className = 'mistake-review-btn';
+    btn.textContent = 'これまでに間違えた・答えられなかった・わからなかった問題を見る';
+    btn.onclick = showMistakeReview;
+    target.appendChild(btn);
+  }
+
+  function showMistakeReview(){
+    const bank = getBank();
+    const counts = getCounts();
+    const missed = bank
+      .map((q, index) => ({q, index, count:Number(counts[q.q] || 0)}))
+      .filter(x => x.count > 0);
+
+    let box = document.getElementById('mistakeReviewBox');
+    if(!box){
+      box=document.createElement('div');
+      box.id='mistakeReviewBox';
+      box.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;overflow:auto;padding:30px 15px;';
+      document.body.appendChild(box);
+    }
+    box.innerHTML='';
+
+    const panel=document.createElement('div');
+    panel.style.cssText='max-width:760px;margin:auto;background:white;border-radius:14px;padding:22px;';
+    const title=document.createElement('h2');
+    title.textContent='これまでに間違えた・答えられなかった・わからなかった問題';
+    panel.appendChild(title);
+
+    if(!missed.length){
+      const empty=document.createElement('div');
+      empty.className='mistake-review-empty';
+      empty.textContent='現在、間違えた・答えられなかった・わからなかった問題はありません。';
+      panel.appendChild(empty);
+    } else {
+      missed.forEach(item=>{
+        const row=document.createElement('div');
+        row.dataset.mistakeRow='1';
+        row.style.cssText='border:1px solid #ddd;border-radius:10px;padding:14px;margin:10px 0;';
+
+        const text=document.createElement('div');
+        text.style.fontWeight='700';
+        text.textContent=(item.index+1)+'. '+item.q.q;
+        row.appendChild(text);
+
+        const count=document.createElement('div');
+        count.style.cssText='font-size:13px;color:#d12b2b;margin-top:5px;';
+        count.textContent='間違い・未回答・わからなかった回数：'+item.count+'回';
+        row.appendChild(count);
+
+        const input=document.createElement('input');
+        input.placeholder='答えを入力（わからない場合は空欄でもOK）';
+        input.style.cssText='width:100%;box-sizing:border-box;padding:10px;margin-top:10px;';
+
+        const check=document.createElement('button');
+        check.textContent='答え合わせ';
+        check.style.cssText='margin-top:8px;padding:8px 12px;';
+
+        const result=document.createElement('span');
+        result.style.marginLeft='10px';
+
+        check.onclick=function(){
+          const answer=input.value.trim();
+          const correct=item.q.a.some(a =>
+            typeof normalize === 'function'
+              ? normalize(a) === normalize(answer)
+              : String(a).trim() === answer
+          );
+
+          if(correct){
+            // この問題を正解したら「間違えた問題」一覧から完全に消す。
+            const c=getCounts();
+            delete c[item.q.q];
+            setCounts(c);
+            row.remove();
+
+            if(!box.querySelector('[data-mistake-row]')){
+              const e=document.createElement('div');
+              e.className='mistake-review-empty';
+              e.textContent='間違えた・答えられなかった・わからなかった問題をすべて正解しました！';
+              panel.insertBefore(e, close);
+            }
+
+            if(typeof window.refreshFrequentMistakeColors==='function')
+              window.refreshFrequentMistakeColors();
+          } else {
+            result.textContent='不正解';
+            result.style.color='#d12b2b';
+          }
+        };
+
+        row.appendChild(input);
+        row.appendChild(check);
+        row.appendChild(result);
+        panel.appendChild(row);
+      });
+    }
+
+    const close=document.createElement('button');
+    close.textContent='閉じる';
+    close.style.cssText='margin-top:15px;padding:10px 18px;';
+    close.onclick=()=>box.remove();
+    panel.appendChild(close);
+    box.appendChild(panel);
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(addButton, 300);
+    setTimeout(addButton, 1000);
+  });
+})();
+</script>
+</body>
+</html>
